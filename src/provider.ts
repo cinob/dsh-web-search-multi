@@ -20,15 +20,18 @@ export class MultiSearchProvider implements WebSearchProvider {
   readonly id = MULTI_SEARCH_PROVIDER_ID
 
   private readonly adapters: Map<SearchProviderKind, ProviderAdapter> = new Map()
-  private readonly config: MultiSearchConfig
-  private readonly envGetter: (key: string) => string | undefined
+  private readonly configProvider: () => MultiSearchConfig
+  private readonly resolveCredential: (ref: string) => Promise<string | undefined> | string | undefined
+  private readonly resolveEnv: (key: string) => string | undefined
 
   constructor(
-    config: MultiSearchConfig,
-    envGetter: (key: string) => string | undefined,
+    configOrProvider: MultiSearchConfig | (() => MultiSearchConfig),
+    resolveCredential: (ref: string) => Promise<string | undefined> | string | undefined,
+    resolveEnv?: (key: string) => string | undefined,
   ) {
-    this.config = config
-    this.envGetter = envGetter
+    this.configProvider = typeof configOrProvider === 'function' ? configOrProvider : () => configOrProvider
+    this.resolveCredential = resolveCredential
+    this.resolveEnv = resolveEnv || ((k) => (typeof process !== 'undefined' ? process.env[k] : undefined))
 
     // Register all supported adapters
     this.adapters.set('so360', new So360Adapter())
@@ -36,58 +39,64 @@ export class MultiSearchProvider implements WebSearchProvider {
     this.adapters.set('baidu', new BaiduAdapter())
     this.adapters.set(
       'tavily',
-      new TavilyAdapter(() => this.config.tavilyApiKey || this.envGetter('TAVILY_API_KEY')),
+      new TavilyAdapter(async () => {
+        const ref = this.configProvider().tavilyApiKeyEnv || 'TAVILY_API_KEY'
+        return (await this.resolveCredential(ref)) || this.resolveEnv('TAVILY_API_KEY')
+      }),
     )
     this.adapters.set(
       'brave',
-      new BraveAdapter(() => this.config.braveApiKey || this.envGetter('BRAVE_API_KEY')),
+      new BraveAdapter(async () => {
+        const ref = this.configProvider().braveApiKeyEnv || 'BRAVE_API_KEY'
+        return (await this.resolveCredential(ref)) || this.resolveEnv('BRAVE_API_KEY')
+      }),
     )
     this.adapters.set(
       'serper',
-      new SerperAdapter(() => this.config.serperApiKey || this.envGetter('SERPER_API_KEY')),
+      new SerperAdapter(async () => {
+        const ref = this.configProvider().serperApiKeyEnv || 'SERPER_API_KEY'
+        return (await this.resolveCredential(ref)) || this.resolveEnv('SERPER_API_KEY')
+      }),
     )
     this.adapters.set(
       'bocha',
-      new BochaAdapter(() => this.config.bochaApiKey || this.envGetter('BOCHA_API_KEY')),
+      new BochaAdapter(async () => {
+        const ref = this.configProvider().bochaApiKeyEnv || 'BOCHA_API_KEY'
+        return (await this.resolveCredential(ref)) || this.resolveEnv('BOCHA_API_KEY')
+      }),
     )
     this.adapters.set(
       'searxng',
       new SearxngAdapter(
-        () => this.config.searxngUrl || this.envGetter('SEARXNG_URL'),
-        () => this.config.searxngToken || this.envGetter('SEARXNG_TOKEN'),
+        () => this.configProvider().searxngUrl || this.resolveEnv('SEARXNG_URL'),
+        async () => {
+          const ref = this.configProvider().searxngTokenEnv || 'SEARXNG_TOKEN'
+          return (await this.resolveCredential(ref)) || this.resolveEnv('SEARXNG_TOKEN')
+        },
       ),
     )
     this.adapters.set('duckduckgo', new DuckDuckGoAdapter())
   }
 
   available(): boolean {
-    const specified = this.config.provider ?? 'auto'
-    if (specified !== 'auto') {
-      const adapter = this.adapters.get(specified)
-      return adapter ? adapter.isAvailable() : false
-    }
-
-    // In auto mode, 360, Bing, Baidu or DuckDuckGo or any key-configured adapter is available
-    for (const adapter of this.adapters.values()) {
-      if (adapter.isAvailable()) return true
-    }
-    return false
+    return true
   }
 
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
     // Sanitize query to remove outer quotes or broken phrase matching
     const rawQuery = request.query || ''
-    const cleanQuery = rawQuery.replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, '').replace(/["'“”‘’]/g, ' ').replace(/\s+/g, ' ').trim()
+    const cleanQuery = rawQuery.replace(/^[\"'“”‘’\s]+|[\"'“”‘’\s]+$/g, '').replace(/[\"'“”‘’]/g, ' ').replace(/\s+/g, ' ').trim()
 
-    const specified = this.config.provider ?? 'auto'
+    const config = this.configProvider()
+    const specified = config.provider ?? 'auto'
     const maxResults = request.maxResults ?? 8
-    const enableFallback = this.config.enableFallback !== false
+    const enableFallback = config.enableFallback !== false
 
     const candidates: ProviderAdapter[] = []
 
     if (specified !== 'auto') {
       const selected = this.adapters.get(specified)
-      if (selected && selected.isAvailable()) {
+      if (selected && (await selected.isAvailable())) {
         candidates.push(selected)
       }
     }
@@ -108,7 +117,7 @@ export class MultiSearchProvider implements WebSearchProvider {
     for (const kind of priorityOrder) {
       if (kind === specified) continue
       const adapter = this.adapters.get(kind)
-      if (adapter && adapter.isAvailable()) {
+      if (adapter && (await adapter.isAvailable())) {
         candidates.push(adapter)
       }
     }

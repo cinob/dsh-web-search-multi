@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,66 +13,29 @@ if (!existsSync(libDir)) {
 
 console.log('📦 Building dsh-web-search-multi...')
 
-// 1. Build Host Entry (lib/index.js) with persistent config loading & saving
-const hostEntry = `import { loadPersistentConfig, savePersistentConfig } from '../src/config-store.ts'
-import { MultiSearchProvider, MULTI_SEARCH_PROVIDER_ID } from '../src/provider.ts'
-import { MultiSearchWebBackend, installMultiSearchWeb } from '../src/web.ts'
+// 1. Bundle Host Entry (src/index.ts -> lib/index.js)
+try {
+  const tsdownBin = '/home/cinob/programs/deepseek-harness/node_modules/.bin/tsdown'
+  execSync(`${tsdownBin} src/index.ts -d lib --format esm --no-clean`, {
+    cwd: rootDir,
+    stdio: 'inherit',
+  })
 
-export { MULTI_SEARCH_PROVIDER_ID, MultiSearchProvider }
-
-export const name = 'dsh-web-search-multi'
-export const inject = ['web']
-
-export function apply(ctx, initialConfig = {}) {
-  const persisted = loadPersistentConfig()
-  let currentConfig = {
-    ...initialConfig,
-    ...persisted,
+  // Ensure lib/index.js exists
+  if (existsSync(join(libDir, 'index.mjs'))) {
+    const code = readFileSync(join(libDir, 'index.mjs'), 'utf8')
+    writeFileSync(join(libDir, 'index.js'), code, 'utf8')
   }
-
-  const getEnv = (key) => {
-    try {
-      const launchEnv = ctx.launchEnvironment
-      if (launchEnv && typeof launchEnv.get === 'function') {
-        const val = launchEnv.get(key)?.value
-        if (val) return val
-      }
-    } catch {
-      // ignore
-    }
-    return typeof process !== 'undefined' ? process.env[key] : undefined
-  }
-
-  const registerProvider = () => {
-    const provider = new MultiSearchProvider(currentConfig, getEnv)
-    return ctx.web.registerSearchProvider(provider)
-  }
-
-  let unregisterProvider = registerProvider()
-
-  const backend = new MultiSearchWebBackend(
-    ctx,
-    () => currentConfig,
-    (updated) => {
-      currentConfig = { ...updated }
-      savePersistentConfig(currentConfig)
-      try {
-        unregisterProvider()
-      } catch {
-        // ignore
-      }
-      unregisterProvider = registerProvider()
-    },
-    getEnv,
-  )
-
-  installMultiSearchWeb(ctx, backend)
+  console.log('✓ Successfully bundled lib/index.js')
+} catch (err) {
+  console.error('Failed to bundle with tsdown, using ESM wrapper fallback:', err)
+  const hostEntry = `export * from '../src/index.ts'\n`
+  writeFileSync(join(libDir, 'index.js'), hostEntry, 'utf8')
 }
-`
 
-writeFileSync(join(libDir, 'index.js'), hostEntry, 'utf8')
-console.log('✓ Generated lib/index.js with full persistence support')
+// 2. Verify client bundle
+if (existsSync(join(libDir, 'client.js'))) {
+  console.log('✓ lib/client.js is ready')
+}
 
-// 2. Build Client Module
-console.log('✓ lib/client.js is ready')
 console.log('✨ Build completed successfully!')

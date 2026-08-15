@@ -3,19 +3,19 @@ import type { ProviderAdapter } from '../types.ts'
 
 export class SerperAdapter implements ProviderAdapter {
   readonly id = 'serper'
-  private readonly apiKeyProvider: () => string | undefined
+  private readonly apiKeyProvider: () => Promise<string | undefined> | string | undefined
 
-  constructor(apiKeyProvider: () => string | undefined) {
+  constructor(apiKeyProvider: () => Promise<string | undefined> | string | undefined) {
     this.apiKeyProvider = apiKeyProvider
   }
 
-  isAvailable(): boolean {
-    const key = this.apiKeyProvider()
+  async isAvailable(): Promise<boolean> {
+    const key = await this.apiKeyProvider()
     return Boolean(key && key.trim().length > 0)
   }
 
   async search(query: string, maxResults: number, signal?: AbortSignal): Promise<WebSearchResult> {
-    const apiKey = this.apiKeyProvider()
+    const apiKey = await this.apiKeyProvider()
     if (!apiKey) throw new Error('Serper API key is missing')
 
     const response = await fetch('https://google.serper.dev/search', {

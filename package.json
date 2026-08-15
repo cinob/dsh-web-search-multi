@@ -1,7 +1,7 @@
 {
   "name": "dsh-web-search-multi",
   "version": "0.1.0",
-  "description": "Multi-provider web search plugin for DeepSeek Harness supporting free-tier providers (Bing, Baidu, Tavily, Brave, Serper, Bocha, SearXNG, DuckDuckGo) with auto-fallback and Web Settings UI.",
+  "description": "Multi-provider web search plugin for DeepSeek Harness supporting free-tier providers (Bing, Baidu, 360, Tavily, Brave, Serper, Bocha, SearXNG, DuckDuckGo) with auto-fallback and Web Settings UI.",
   "type": "module",
   "main": "lib/index.js",
   "types": "src/index.ts",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test"
+    "test": "node --test tests/**/*.spec.ts"
   },
   "exports": {
     ".": {
@@ -68,13 +68,25 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-web": "*"
+    "@deepseek-ai/dsh-credentials": "*",
+    "@deepseek-ai/dsh-settings": "*",
+    "@deepseek-ai/dsh-web": "*",
+    "@deepseek-ai/schemastery": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
       "optional": true
     },
+    "@deepseek-ai/dsh-credentials": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-settings": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-web": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
@@ -84,6 +96,7 @@
     "deepseek-harness",
     "awesome-dsh",
     "web-search",
+    "so360",
     "bing",
     "baidu",
     "tavily",

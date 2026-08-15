@@ -18,33 +18,33 @@ export interface MultiSearchConfig {
    */
   provider?: SearchProviderKind
 
-  /** Tavily API Key (1,000 free searches/month). Falls back to env $TAVILY_API_KEY. */
-  tavilyApiKey?: string
-
-  /** Brave Search API Key (2,000 free searches/month). Falls back to env $BRAVE_API_KEY. */
-  braveApiKey?: string
-
-  /** Serper (Google SERP) API Key (2,500 free searches). Falls back to env $SERPER_API_KEY. */
-  serperApiKey?: string
-
-  /** Bocha (博查) API Key. Falls back to env $BOCHA_API_KEY. */
-  bochaApiKey?: string
-
-  /** SearXNG instance URL (e.g. http://localhost:8888). Falls back to env $SEARXNG_URL. */
-  searxngUrl?: string
-
-  /** SearXNG Access Token / Secret Key (optional for private/token-protected SearXNG instances). Falls back to env $SEARXNG_TOKEN. */
-  searxngToken?: string
-
   /**
    * Whether to automatically fall back to another provider if the active one fails or hits rate limits.
    * Defaults to true.
    */
   enableFallback?: boolean
+
+  /** SearXNG instance URL (e.g. https://s.655443.xyz). */
+  searxngUrl?: string
+
+  /** Credential reference for Tavily (default: TAVILY_API_KEY). */
+  tavilyApiKeyEnv?: string
+
+  /** Credential reference for Brave (default: BRAVE_API_KEY). */
+  braveApiKeyEnv?: string
+
+  /** Credential reference for Serper (default: SERPER_API_KEY). */
+  serperApiKeyEnv?: string
+
+  /** Credential reference for Bocha (default: BOCHA_API_KEY). */
+  bochaApiKeyEnv?: string
+
+  /** Credential reference for SearXNG Token (default: SEARXNG_TOKEN). */
+  searxngTokenEnv?: string
 }
 
 export interface ProviderAdapter {
   readonly id: SearchProviderKind
-  isAvailable(): boolean
+  isAvailable(): Promise<boolean> | boolean
   search(query: string, maxResults: number, signal?: AbortSignal): Promise<WebSearchResult>
 }

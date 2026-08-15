@@ -4,11 +4,11 @@ import type { ProviderAdapter } from '../types.ts'
 export class SearxngAdapter implements ProviderAdapter {
   readonly id = 'searxng'
   private readonly urlProvider: () => string | undefined
-  private readonly tokenProvider?: () => string | undefined
+  private readonly tokenProvider?: () => Promise<string | undefined> | string | undefined
 
   constructor(
     urlProvider: () => string | undefined,
-    tokenProvider?: () => string | undefined,
+    tokenProvider?: () => Promise<string | undefined> | string | undefined,
   ) {
     this.urlProvider = urlProvider
     this.tokenProvider = tokenProvider
@@ -23,7 +23,7 @@ export class SearxngAdapter implements ProviderAdapter {
     const baseUrl = this.urlProvider()
     if (!baseUrl) throw new Error('SearXNG URL is missing')
 
-    const token = this.tokenProvider ? this.tokenProvider() : undefined
+    const token = this.tokenProvider ? await this.tokenProvider() : undefined
     const cleanBase = baseUrl.replace(/\/+$/, '')
     const url = new URL(`${cleanBase}/search`)
     url.searchParams.set('q', query)

@@ -34,39 +34,114 @@ export class MultiSearchWebBackend {
   private readonly ctx: Context
   private readonly getConfig: () => MultiSearchConfig
   private readonly saveConfig: (config: MultiSearchConfig) => Promise<void> | void
-  private readonly getEnv: (key: string) => string | undefined
 
   constructor(
     ctx: Context,
     getConfig: () => MultiSearchConfig,
     saveConfig: (config: MultiSearchConfig) => Promise<void> | void,
-    getEnv: (key: string) => string | undefined,
   ) {
     this.ctx = ctx
     this.getConfig = getConfig
     this.saveConfig = saveConfig
-    this.getEnv = getEnv
+  }
+
+  private async isCredentialConfigured(ref: string): Promise<boolean> {
+    try {
+      const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+      if (credentials) {
+        const desc = await credentials.describe(ref).catch(() => undefined)
+        if (desc && desc.configured) return true
+        const hit = await credentials.resolve(ref).catch(() => undefined)
+        if (hit && hit.value && hit.value.trim().length > 0) return true
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const launchEnv = (this.ctx as any).launchEnvironment
+      if (launchEnv && typeof launchEnv.get === 'function') {
+        const val = launchEnv.get(ref)?.value
+        if (val && val.trim().length > 0) return true
+      }
+    } catch {
+      // ignore
+    }
+
+    return Boolean(typeof process !== 'undefined' && process.env[ref]?.trim())
+  }
+
+  private async resolveCredentialValue(ref: string): Promise<string | undefined> {
+    try {
+      const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+      if (credentials) {
+        const hit = await credentials.resolve(ref).catch(() => undefined)
+        if (hit && hit.value && hit.value.trim().length > 0) return hit.value
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const launchEnv = (this.ctx as any).launchEnvironment
+      if (launchEnv && typeof launchEnv.get === 'function') {
+        const val = launchEnv.get(ref)?.value
+        if (val && val.trim().length > 0) return val
+      }
+    } catch {
+      // ignore
+    }
+
+    return typeof process !== 'undefined' ? process.env[ref] : undefined
+  }
+
+  private async storeCredential(ref: string, secret: string | undefined): Promise<void> {
+    if (secret === undefined) return
+    const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+    if (!credentials) return
+
+    const trimmed = secret.trim()
+    if (trimmed.length > 0) {
+      await credentials.set(ref, trimmed)
+    } else {
+      await credentials.unset(ref).catch(() => {})
+    }
   }
 
   async snapshot(): Promise<MultiSearchSettingsSnapshot> {
     const cfg = this.getConfig()
-    const tavilyKey = cfg.tavilyApiKey || this.getEnv('TAVILY_API_KEY')
-    const braveKey = cfg.braveApiKey || this.getEnv('BRAVE_API_KEY')
-    const serperKey = cfg.serperApiKey || this.getEnv('SERPER_API_KEY')
-    const bochaKey = cfg.bochaApiKey || this.getEnv('BOCHA_API_KEY')
-    const searxngUrl = cfg.searxngUrl || this.getEnv('SEARXNG_URL') || ''
-    const searxngToken = cfg.searxngToken || this.getEnv('SEARXNG_TOKEN')
+    const tavilyKeyRef = cfg.tavilyApiKeyEnv || 'TAVILY_API_KEY'
+    const braveKeyRef = cfg.braveApiKeyEnv || 'BRAVE_API_KEY'
+    const serperKeyRef = cfg.serperApiKeyEnv || 'SERPER_API_KEY'
+    const bochaKeyRef = cfg.bochaApiKeyEnv || 'BOCHA_API_KEY'
+    const searxngTokenRef = cfg.searxngTokenEnv || 'SEARXNG_TOKEN'
+
+    const [
+      tavilyApiKeyConfigured,
+      braveApiKeyConfigured,
+      serperApiKeyConfigured,
+      bochaApiKeyConfigured,
+      searxngTokenConfigured,
+    ] = await Promise.all([
+      this.isCredentialConfigured(tavilyKeyRef),
+      this.isCredentialConfigured(braveKeyRef),
+      this.isCredentialConfigured(serperKeyRef),
+      this.isCredentialConfigured(bochaKeyRef),
+      this.isCredentialConfigured(searxngTokenRef),
+    ])
+
+    const searxngUrl = cfg.searxngUrl || (typeof process !== 'undefined' ? process.env['SEARXNG_URL'] : '') || ''
 
     return {
       config: {
         provider: cfg.provider ?? 'auto',
         enableFallback: cfg.enableFallback !== false,
-        tavilyApiKeyConfigured: Boolean(tavilyKey && tavilyKey.trim().length > 0),
-        braveApiKeyConfigured: Boolean(braveKey && braveKey.trim().length > 0),
-        serperApiKeyConfigured: Boolean(serperKey && serperKey.trim().length > 0),
-        bochaApiKeyConfigured: Boolean(bochaKey && bochaKey.trim().length > 0),
+        tavilyApiKeyConfigured,
+        braveApiKeyConfigured,
+        serperApiKeyConfigured,
+        bochaApiKeyConfigured,
         searxngUrl,
-        searxngTokenConfigured: Boolean(searxngToken && searxngToken.trim().length > 0),
+        searxngTokenConfigured,
       },
       providers: [
         {
@@ -101,28 +176,28 @@ export class MultiSearchWebBackend {
           id: 'tavily',
           name: 'Tavily AI Search',
           quotaDesc: '每月 1,000 次免费 (带 AI 摘要)',
-          available: Boolean(tavilyKey),
+          available: tavilyApiKeyConfigured,
           link: 'https://tavily.com',
         },
         {
           id: 'brave',
           name: 'Brave Search',
           quotaDesc: '每月 2,000 次免费 (全球独立索引)',
-          available: Boolean(braveKey),
+          available: braveApiKeyConfigured,
           link: 'https://brave.com/search/api/',
         },
         {
           id: 'serper',
           name: 'Serper (Google)',
           quotaDesc: '注册赠送 2,500 次调用',
-          available: Boolean(serperKey),
+          available: serperApiKeyConfigured,
           link: 'https://serper.dev',
         },
         {
           id: 'bocha',
           name: '博查 AI (Bocha)',
           quotaDesc: '国内 AI 搜索开放平台',
-          available: Boolean(bochaKey),
+          available: bochaApiKeyConfigured,
           link: 'https://bochaai.com',
         },
         {
@@ -158,23 +233,19 @@ export class MultiSearchWebBackend {
             enableFallback: body.enableFallback !== undefined ? body.enableFallback : current.enableFallback,
             searxngUrl: body.searxngUrl !== undefined ? body.searxngUrl : current.searxngUrl,
           }
-          if (body.tavilyApiKey !== undefined && body.tavilyApiKey.trim().length > 0) {
-            updated.tavilyApiKey = body.tavilyApiKey
-          }
-          if (body.braveApiKey !== undefined && body.braveApiKey.trim().length > 0) {
-            updated.braveApiKey = body.braveApiKey
-          }
-          if (body.serperApiKey !== undefined && body.serperApiKey.trim().length > 0) {
-            updated.serperApiKey = body.serperApiKey
-          }
-          if (body.bochaApiKey !== undefined && body.bochaApiKey.trim().length > 0) {
-            updated.bochaApiKey = body.bochaApiKey
-          }
-          if (body.searxngToken !== undefined && body.searxngToken.trim().length > 0) {
-            updated.searxngToken = body.searxngToken
-          }
 
+          // Save secrets securely into ctx.credentials
+          await Promise.all([
+            this.storeCredential(current.tavilyApiKeyEnv || 'TAVILY_API_KEY', body.tavilyApiKey),
+            this.storeCredential(current.braveApiKeyEnv || 'BRAVE_API_KEY', body.braveApiKey),
+            this.storeCredential(current.serperApiKeyEnv || 'SERPER_API_KEY', body.serperApiKey),
+            this.storeCredential(current.bochaApiKeyEnv || 'BOCHA_API_KEY', body.bochaApiKey),
+            this.storeCredential(current.searxngTokenEnv || 'SEARXNG_TOKEN', body.searxngToken),
+          ])
+
+          // Save non-secrets into ctx.settings (settings.yaml)
           await this.saveConfig(updated)
+
           const data = await this.snapshot()
           this.json(res, 200, { ok: true, value: data })
           return
@@ -186,16 +257,30 @@ export class MultiSearchWebBackend {
           const testConfig: MultiSearchConfig = {
             ...this.getConfig(),
             provider: providerKind ?? 'auto',
-            tavilyApiKey: body.tavilyApiKey || this.getConfig().tavilyApiKey,
-            braveApiKey: body.braveApiKey || this.getConfig().braveApiKey,
-            serperApiKey: body.serperApiKey || this.getConfig().serperApiKey,
-            bochaApiKey: body.bochaApiKey || this.getConfig().bochaApiKey,
             searxngUrl: body.searxngUrl || this.getConfig().searxngUrl,
-            searxngToken: body.searxngToken || this.getConfig().searxngToken,
+          }
+
+          const resolveTestCredential = async (ref: string): Promise<string | undefined> => {
+            if (ref === (testConfig.tavilyApiKeyEnv || 'TAVILY_API_KEY') && body.tavilyApiKey) {
+              return body.tavilyApiKey
+            }
+            if (ref === (testConfig.braveApiKeyEnv || 'BRAVE_API_KEY') && body.braveApiKey) {
+              return body.braveApiKey
+            }
+            if (ref === (testConfig.serperApiKeyEnv || 'SERPER_API_KEY') && body.serperApiKey) {
+              return body.serperApiKey
+            }
+            if (ref === (testConfig.bochaApiKeyEnv || 'BOCHA_API_KEY') && body.bochaApiKey) {
+              return body.bochaApiKey
+            }
+            if (ref === (testConfig.searxngTokenEnv || 'SEARXNG_TOKEN') && body.searxngToken) {
+              return body.searxngToken
+            }
+            return this.resolveCredentialValue(ref)
           }
 
           const start = Date.now()
-          const provider = new MultiSearchProvider(testConfig, this.getEnv)
+          const provider = new MultiSearchProvider(testConfig, resolveTestCredential)
           const result = await provider.search({ query, maxResults: 5 })
           const latencyMs = Date.now() - start
 
