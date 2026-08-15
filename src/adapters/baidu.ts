@@ -11,7 +11,7 @@ export class BaiduAdapter implements ProviderAdapter {
   async search(query: string, maxResults: number, signal?: AbortSignal): Promise<WebSearchResult> {
     const url = new URL('https://www.baidu.com/s')
     url.searchParams.set('wd', query)
-    url.searchParams.set('rn', String(maxResults))
+    url.searchParams.set('rn', String(maxResults + 3))
     url.searchParams.set('ie', 'utf-8')
 
     const response = await fetch(url.toString(), {
@@ -45,14 +45,14 @@ export class BaiduAdapter implements ProviderAdapter {
     const sources: WebSearchSource[] = []
 
     // Match each result block <div class="result... c-container..."> ... </div>
-    const containerRegex = /<div[^>]*class="[^"]*result[^"]*c-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class="[^"]*result|<div id="content_bottom"|$)/g
+    const containerRegex = /<div[^>]*class="[^"]*c-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<div[^>]*class="[^"]*c-container|<div id="content_bottom"|$)/g
     let match: RegExpExecArray | null
 
     while ((match = containerRegex.exec(html)) !== null && sources.length < maxResults) {
       const block = match[1]
 
       // Extract title and URL
-      const titleLinkMatch = /<h3[^>]*class="[^"]*t[^"]*"[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
+      const titleLinkMatch = /<h3[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
         || /<a[^>]*href="(http[^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(block)
 
       if (!titleLinkMatch) continue
@@ -61,13 +61,13 @@ export class BaiduAdapter implements ProviderAdapter {
       const rawTitle = titleLinkMatch[2]
 
       // Extract abstract/snippet
-      const abstractMatch = /<div[^>]*class="[^"]*(?:c-abstract|content-right|cos-row)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(block)
-        || /<span[^>]*class="[^"]*content-right[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(block)
+      const abstractMatch = /<div[^>]*class="[^"]*(?:c-abstract|content-right|cos-row|summary-text)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(block)
+        || /<span[^>]*class="[^"]*(?:content-right|summary-text)[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(block)
 
       const rawSnippet = abstractMatch ? abstractMatch[1] : ''
 
-      const cleanTitle = this.stripHtml(rawTitle).trim()
-      const cleanSnippet = this.stripHtml(rawSnippet).trim()
+      const cleanTitle = this.cleanText(rawTitle)
+      const cleanSnippet = this.cleanText(rawSnippet)
 
       if (cleanTitle.length === 0) continue
 
@@ -81,9 +81,13 @@ export class BaiduAdapter implements ProviderAdapter {
     return sources
   }
 
-  private stripHtml(str: string): string {
+  private cleanText(str: string): string {
     return str
-      .replace(/<[^>]*>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '') // remove HTML/JSON comments
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]*>/g, '') // remove HTML tags
+      .replace(/\{"[\s\S]*?"\}/g, '') // remove JSON blobs
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
@@ -92,5 +96,6 @@ export class BaiduAdapter implements ProviderAdapter {
       .replace(/&nbsp;/g, ' ')
       .replace(/&emsp;/g, ' ')
       .replace(/\s+/g, ' ')
+      .trim()
   }
 }
