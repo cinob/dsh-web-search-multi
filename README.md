@@ -29,25 +29,32 @@ English | [简体中文](README.zh.md)
 
 ---
 
-## 3. Install & Uninstall
+## 3. Install
 
-### Direct Installation from GitHub (Recommended)
 ```bash
 dsh plugin --profile web add github:cinob/dsh-web-search-multi
 ```
 
-### Or via Git HTTPS Spec
-```bash
-dsh plugin --profile web add git+https://github.com/cinob/dsh-web-search-multi.git
+Then add the provider to the profile patch layer at `$DSH_HOME/profiles/web/cordis.patch.yml` (hot-reloaded — no restart needed):
+
+```yaml
+- insert:
+    - id: web-search-multi
+      name: dsh-web-search-multi
+      config:
+        provider: auto
+        enableFallback: true
+
+- id: web
+  name: '@deepseek-ai/dsh-web'
+  config:
+    searchProvider: multi-search
 ```
 
-### Or Local Clone
-```bash
-git clone https://github.com/cinob/dsh-web-search-multi.git
-dsh plugin --profile web add ./dsh-web-search-multi
-```
+### Uninstallation
 
-### Uninstall
+1. Remove the `web-search-multi` and `web` searchProvider overrides from `$DSH_HOME/profiles/web/cordis.patch.yml`.
+2. Uninstall the plugin:
 ```bash
 dsh plugin --profile web remove dsh-web-search-multi
 ```
@@ -79,21 +86,6 @@ dsh plugin --profile web remove dsh-web-search-multi
 | `SEARXNG_URL` | SearXNG instance URL (e.g. `http://localhost:8888`) |
 | `SEARXNG_TOKEN` | SearXNG access token (optional) |
 
-### Profile Patch (`cordis.patch.yml`)
-```yaml
-- insert:
-    - id: web-search-multi
-      name: dsh-web-search-multi
-      config:
-        provider: auto
-        enableFallback: true
-
-- id: web
-  name: '@deepseek-ai/dsh-web'
-  config:
-    searchProvider: multi-search
-```
-
 ---
 
 ## 6. Permissions & Data Disclosures
@@ -108,7 +100,7 @@ dsh plugin --profile web remove dsh-web-search-multi
 ## 7. Troubleshooting
 
 - **DuckDuckGo `fetch failed`**: In mainland China, DuckDuckGo requires a network proxy (`HTTP_PROXY`). Switch to `Bing` or `Baidu` for zero-proxy direct access.
-- **Config not applied**: Restart `dsh web` after modifying `cordis.patch.yml` or adding the plugin.
+- **Config not applied**: Changes to `cordis.patch.yml` hot-reload automatically without requiring a server restart.
 
 ---
 
@@ -132,4 +124,3 @@ npm test
 
 MIT License.
 - Repository: [https://github.com/cinob/dsh-web-search-multi](https://github.com/cinob/dsh-web-search-multi)
-- Issue Tracker: [https://github.com/cinob/dsh-web-search-multi/issues](https://github.com/cinob/dsh-web-search-multi/issues)

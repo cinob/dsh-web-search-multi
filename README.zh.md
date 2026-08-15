@@ -29,25 +29,32 @@
 
 ---
 
-## 3. 安装与卸载 (Install & Uninstall)
+## 3. 安装与挂载 (Install)
 
-### 方式 A：直接通过 GitHub 安装（推荐）
 ```bash
 dsh plugin --profile web add github:cinob/dsh-web-search-multi
 ```
 
-### 方式 B：通过 Git 仓库地址安装
-```bash
-dsh plugin --profile web add git+https://github.com/cinob/dsh-web-search-multi.git
-```
+然后在 `$DSH_HOME/profiles/web/cordis.patch.yml` 中添加配置（**热重载生效，无需重启 DSH**）：
 
-### 方式 C：本地克隆源码安装
-```bash
-git clone https://github.com/cinob/dsh-web-search-multi.git
-dsh plugin --profile web add ./dsh-web-search-multi
+```yaml
+- insert:
+    - id: web-search-multi
+      name: dsh-web-search-multi
+      config:
+        provider: auto
+        enableFallback: true
+
+- id: web
+  name: '@deepseek-ai/dsh-web'
+  config:
+    searchProvider: multi-search
 ```
 
 ### 卸载插件
+
+1. 从 `$DSH_HOME/profiles/web/cordis.patch.yml` 中移除 `web-search-multi` 和 `web` 相关的覆盖项。
+2. 卸载依赖包：
 ```bash
 dsh plugin --profile web remove dsh-web-search-multi
 ```
@@ -79,21 +86,6 @@ dsh plugin --profile web remove dsh-web-search-multi
 | `SEARXNG_URL` | SearXNG 实例 URL (例如 `http://localhost:8888`) |
 | `SEARXNG_TOKEN` | SearXNG 认证 Token (选填) |
 
-### 配置文件挂载 (`cordis.patch.yml`)
-```yaml
-- insert:
-    - id: web-search-multi
-      name: dsh-web-search-multi
-      config:
-        provider: auto
-        enableFallback: true
-
-- id: web
-  name: '@deepseek-ai/dsh-web'
-  config:
-    searchProvider: multi-search
-```
-
 ---
 
 ## 6. 权限与安全披露 (Permissions & Disclosures)
@@ -107,19 +99,19 @@ dsh plugin --profile web remove dsh-web-search-multi
 
 ## 7. 常见问题排查 (Troubleshooting)
 
-- **DuckDuckGo `fetch failed`**：在中国大陆网络环境下，DDG 需配置代理网络；免代理环境下推荐使用内置的 `Bing 必应 (免 Key)` 或 `百度搜索`。
-- **配置修改未生效**：修改 `cordis.patch.yml` 后请重启一次 `dsh web` 服务进程。
+- **DuckDuckGo `fetch failed`**: 国内环境直连 DuckDuckGo 需要网络代理，建议切换至 `Bing` 或 `Baidu` 免代理直连。
+- **配置未生效**: `cordis.patch.yml` 修改后会自动热重载，无需重启服务。
 
 ---
 
-## 8. 本地开发与构建 (Development)
+## 8. 本地开发与测试 (Development)
 
 ```bash
 # 克隆仓库
 git clone https://github.com/cinob/dsh-web-search-multi.git
 cd dsh-web-search-multi
 
-# 编译前后端产物
+# 构建前后端产物
 npm run build
 
 # 运行单元测试
@@ -128,8 +120,7 @@ npm test
 
 ---
 
-## 9. 许可证 (License)
+## 9. 开源协议 (License)
 
-本项目基于 [MIT License](LICENSE) 开源。欢迎提交 PR 和 Issue：
+MIT License.
 - 仓库地址: [https://github.com/cinob/dsh-web-search-multi](https://github.com/cinob/dsh-web-search-multi)
-- 问题反馈: [https://github.com/cinob/dsh-web-search-multi/issues](https://github.com/cinob/dsh-web-search-multi/issues)
