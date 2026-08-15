@@ -178,11 +178,11 @@ export function MultiSearchSettingsSection() {
             <h2>多源免费 Web 搜索</h2>
           </div>
           <div className="dsh-ms-header-tag">
-            <span className="dsh-ms-pill success">● Bing / 百度免 Key 直连就绪</span>
+            <span className="dsh-ms-pill success">● 360 / Bing / 百度免 Key 直连就绪</span>
           </div>
         </div>
         <p className="dsh-ms-subtitle">
-          聚合主流包含免费额度的搜索引擎 API 及开源自建引擎，支持自动降级（Auto-Fallback）与 Bing 必应 / 百度免 Key 直连兜底。
+          聚合主流包含免费额度的搜索引擎 API 及开源自建引擎，支持自动降级（Auto-Fallback）与 360 / Bing / 百度免 Key 直连兜底。
         </p>
       </div>
 
@@ -209,7 +209,8 @@ export function MultiSearchSettingsSection() {
               onChange={(e) => handleProviderChange(e.target.value)}
               className="dsh-ms-select"
             >
-              <option value="auto">🌟 自动策略 (按优先级调用可用 Key，降级至 Bing / 百度 / DDG)</option>
+              <option value="auto">🌟 自动策略 (按优先级调用可用 Key，降级至 360 / Bing / 百度 / DDG)</option>
+              <option value="so360">360 搜索 (国内实时新闻/时事 · 推荐)</option>
               <option value="bing">Bing 必应 (国内/全球直连免 Key · 推荐)</option>
               <option value="baidu">百度搜索 (国内极速直连 · 免 Key)</option>
               <option value="tavily">Tavily AI Search (每月 1000 次免费)</option>
@@ -465,6 +466,7 @@ export function MultiSearchSettingsSection() {
             style={{ width: '170px', flexShrink: 0 }}
           >
             <option value="auto">自动测试 (Auto)</option>
+            <option value="so360">360 搜索 (实时新闻)</option>
             <option value="bing">Bing 必应 (免 Key)</option>
             <option value="baidu">百度搜索 (免 Key)</option>
             <option value="tavily">Tavily</option>

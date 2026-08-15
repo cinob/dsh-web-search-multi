@@ -4,6 +4,7 @@ import type {
   WebSearchResult,
 } from '@deepseek-ai/dsh-web'
 import type { MultiSearchConfig, ProviderAdapter, SearchProviderKind } from './types.ts'
+import { So360Adapter } from './adapters/so360.ts'
 import { BingAdapter } from './adapters/bing.ts'
 import { BaiduAdapter } from './adapters/baidu.ts'
 import { TavilyAdapter } from './adapters/tavily.ts'
@@ -25,6 +26,7 @@ export class MultiSearchProvider implements WebSearchProvider {
     private readonly envGetter: (key: string) => string | undefined,
   ) {
     // Register all supported adapters
+    this.adapters.set('so360', new So360Adapter())
     this.adapters.set('bing', new BingAdapter())
     this.adapters.set('baidu', new BaiduAdapter())
     this.adapters.set(
@@ -60,7 +62,7 @@ export class MultiSearchProvider implements WebSearchProvider {
       return adapter ? adapter.isAvailable() : false
     }
 
-    // In auto mode, Bing, Baidu or DuckDuckGo or any key-configured adapter is available
+    // In auto mode, 360, Bing, Baidu or DuckDuckGo or any key-configured adapter is available
     for (const adapter of this.adapters.values()) {
       if (adapter.isAvailable()) return true
     }
@@ -68,6 +70,10 @@ export class MultiSearchProvider implements WebSearchProvider {
   }
 
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
+    // Sanitize query to remove outer quotes or broken phrase matching
+    const rawQuery = request.query || ''
+    const cleanQuery = rawQuery.replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, '').replace(/["'“”‘’]/g, ' ').replace(/\s+/g, ' ').trim()
+
     const specified = this.config.provider ?? 'auto'
     const maxResults = request.maxResults ?? 8
     const enableFallback = this.config.enableFallback !== false
@@ -81,12 +87,13 @@ export class MultiSearchProvider implements WebSearchProvider {
       }
     }
 
-    // Build the fallback chain: Prioritize high-quality API keys, then Bing, then Baidu, then SearXNG, then DDG
+    // Build the fallback chain: Prioritize API keys, then 360 (real-time news/events in CN), then Bing, then Baidu, then SearXNG, then DDG
     const priorityOrder: SearchProviderKind[] = [
       'tavily',
       'brave',
       'serper',
       'bocha',
+      'so360',
       'bing',
       'baidu',
       'searxng',
@@ -113,7 +120,7 @@ export class MultiSearchProvider implements WebSearchProvider {
       }
 
       try {
-        const result = await adapter.search(request.query, maxResults, signal)
+        const result = await adapter.search(cleanQuery, maxResults, signal)
         if (result.sources.length > 0 || result.content) {
           return result
         }

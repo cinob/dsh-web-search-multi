@@ -60,6 +60,13 @@ export class MultiSearchWebBackend {
       },
       providers: [
         {
+          id: 'so360',
+          name: '360 搜索 (实时新闻推荐 · 免 Key)',
+          quotaDesc: '完全免费、国内实时新闻/时事热点',
+          available: true,
+          link: 'https://www.so.com',
+        },
+        {
           id: 'bing',
           name: 'Bing 必应 (免 Key)',
           quotaDesc: '完全免费、国内/全球极速直连',

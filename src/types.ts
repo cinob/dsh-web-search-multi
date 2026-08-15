@@ -2,6 +2,7 @@ import type { WebSearchResult, WebSearchSource } from '@deepseek-ai/dsh-web'
 
 export type SearchProviderKind =
   | 'auto'
+  | 'so360'
   | 'bing'
   | 'baidu'
   | 'tavily'
@@ -13,7 +14,7 @@ export type SearchProviderKind =
 
 export interface MultiSearchConfig {
   /**
-   * Preferred search provider. Defaults to 'auto' (tries available keys in priority order, falling back to Bing / Baidu).
+   * Preferred search provider. Defaults to 'auto' (tries available keys in priority order, falling back to 360 / Bing / Baidu).
    */
   provider?: SearchProviderKind
 
