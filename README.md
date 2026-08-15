@@ -1,6 +1,6 @@
 # dsh-web-search-multi
 
-> Multi-provider web search plugin for **DeepSeek Harness (DSH)** supporting free-tier providers (Bing, Baidu, Tavily, Brave, Serper, Bocha, SearXNG, DuckDuckGo) with auto-fallback and Web Settings UI.
+> Multi-provider web search plugin for **DeepSeek Harness (DSH)** supporting free-tier providers (360, Bing, Baidu, Tavily, Brave, Serper, Bocha, SearXNG, DuckDuckGo) with auto-fallback and Web Settings UI.
 
 English | [简体中文](README.zh.md)
 
@@ -13,11 +13,12 @@ English | [简体中文](README.zh.md)
 ## 1. Overview
 
 `dsh-web-search-multi` connects DeepSeek Harness to multiple search engines with automated fault tolerance:
-- **Free Zero-Key Engines**: Bing (RSS structured + HTML parsing) and Baidu direct search without any API keys.
+- **Free Zero-Key Direct Engines**: 360 Search (real-time news and trending events), Bing, and Baidu direct search without any API keys.
 - **AI-Native Free Tiers**: Tavily (1,000/mo), Brave Search (2,000/mo), Serper/Google (2,500 free), Bocha AI.
 - **Private & Self-Hosted**: SearXNG with token authentication.
 - **Global Fallback**: DuckDuckGo.
-- **Web GUI Control**: Full graphical settings tab inside DSH Web UI (`Settings` -> `Web Search`) with live connection testing and instant persistence.
+- **Web GUI Control**: Full graphical settings tab inside DSH Web UI (`Settings` -> `多源 Web 搜索`) with live connection testing and instant persistence.
+- **Secure Credential Storage**: Secrets saved securely to `~/.dsh/.credentials.yaml` (mode 0600), non-secret settings saved to `~/.dsh/settings.yaml`.
 
 ---
 
@@ -31,30 +32,16 @@ English | [简体中文](README.zh.md)
 
 ## 3. Install
 
+As a standard DSH Profile Bundle, installation is one simple command:
+
 ```bash
 dsh plugin --profile web add github:cinob/dsh-web-search-multi
 ```
 
-Then add the provider to the profile patch layer at `$DSH_HOME/profiles/web/cordis.patch.yml` (hot-reloaded — no restart needed):
-
-```yaml
-- insert:
-    - id: web-search-multi
-      name: dsh-web-search-multi
-      config:
-        provider: auto
-        enableFallback: true
-
-- id: web
-  name: '@deepseek-ai/dsh-web'
-  config:
-    searchProvider: multi-search
-```
+> **Note**: As a Profile Bundle, the plugin's built-in `cordis.patch.yml` automatically mounts and activates `multi-search`. There is **no need** to manually insert `web-search-multi` in `profiles/web/cordis.patch.yml`.
 
 ### Uninstallation
 
-1. Remove the `web-search-multi` and `web` searchProvider overrides from `$DSH_HOME/profiles/web/cordis.patch.yml`.
-2. Uninstall the plugin:
 ```bash
 dsh plugin --profile web remove dsh-web-search-multi
 ```
@@ -69,21 +56,20 @@ dsh plugin --profile web remove dsh-web-search-multi
    ```
 2. Open Web GUI (`http://127.0.0.1:3080`) -> Click **Settings** (Gear icon) -> Select **多源 Web 搜索** in the sidebar.
 3. Choose your preferred search engine or leave it on **自动策略 (Auto)**.
-4. (Optional) Enter your API keys for Tavily, Brave, Serper, or Bocha.
+4. (Optional) Enter your API keys for Tavily, Brave, Serper, Bocha, or SearXNG Token, click Save, and test in real time.
 
 ---
 
 ## 5. Configuration
 
-### Environment Variables
-| Variable | Description |
+### Credentials & Environment Mapping
+| Key / Variable | Description |
 |---|---|
-| `DSH_WEB_SEARCH_PROVIDER` | Set to `multi-search` |
 | `TAVILY_API_KEY` | Tavily API Key (1,000 searches/mo) |
 | `BRAVE_API_KEY` | Brave Search API Key (2,000 searches/mo) |
 | `SERPER_API_KEY` | Serper Google API Key (2,500 searches) |
 | `BOCHA_API_KEY` | Bocha AI Search API Key |
-| `SEARXNG_URL` | SearXNG instance URL (e.g. `http://localhost:8888`) |
+| `SEARXNG_URL` | SearXNG instance URL (e.g. `https://s.655443.xyz`) |
 | `SEARXNG_TOKEN` | SearXNG access token (optional) |
 
 ---
@@ -92,19 +78,11 @@ dsh plugin --profile web remove dsh-web-search-multi
 
 - **Risk Level**: `low`
 - **Network**: Outbound HTTPS requests to selected search providers.
-- **Filesystem**: Reads/writes local persistent configuration under `~/.dsh/web-search-multi.json`.
-- **Credentials**: API keys are saved strictly to your local configuration document.
+- **Credentials**: Secrets persist securely in `~/.dsh/.credentials.yaml` via `ctx.credentials`, general settings in `~/.dsh/settings.yaml`.
 
 ---
 
-## 7. Troubleshooting
-
-- **DuckDuckGo `fetch failed`**: In mainland China, DuckDuckGo requires a network proxy (`HTTP_PROXY`). Switch to `Bing` or `Baidu` for zero-proxy direct access.
-- **Config not applied**: Changes to `cordis.patch.yml` hot-reload automatically without requiring a server restart.
-
----
-
-## 8. Development
+## 7. Development
 
 ```bash
 # Clone repository
@@ -120,7 +98,7 @@ npm test
 
 ---
 
-## 9. License
+## 8. License
 
 MIT License.
 - Repository: [https://github.com/cinob/dsh-web-search-multi](https://github.com/cinob/dsh-web-search-multi)
