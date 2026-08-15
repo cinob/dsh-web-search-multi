@@ -1,0 +1,96 @@
+{
+  "name": "dsh-web-search-multi",
+  "version": "0.1.0",
+  "description": "Multi-provider web search plugin for DeepSeek Harness supporting free-tier providers (Bing, Baidu, Tavily, Brave, Serper, Bocha, SearXNG, DuckDuckGo) with auto-fallback and Web Settings UI.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cinob/dsh-web-search-multi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cinob/dsh-web-search-multi/issues"
+  },
+  "homepage": "https://github.com/cinob/dsh-web-search-multi#readme",
+  "author": "cinob",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    },
+    "disclosures": {
+      "risk": "low",
+      "network": true,
+      "filesystem": "workspace-write",
+      "credentials": [
+        "TAVILY_API_KEY",
+        "BRAVE_API_KEY",
+        "SERPER_API_KEY",
+        "BOCHA_API_KEY",
+        "SEARXNG_TOKEN"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-web": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-web": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh-external",
+    "deepseek-harness",
+    "awesome-dsh",
+    "web-search",
+    "bing",
+    "baidu",
+    "tavily",
+    "brave",
+    "serper",
+    "bocha",
+    "searxng",
+    "duckduckgo"
+  ]
+}

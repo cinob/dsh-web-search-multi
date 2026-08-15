@@ -1,0 +1,13 @@
+# dsh-web-search-multi bundle patch: mounts the multi-search plugin into the profile layer stack.
+- insert:
+    - id: web-search-multi
+      name: dsh-web-search-multi
+      config:
+        provider: auto
+        enableFallback: true
+
+# Point ctx.web searchProvider to multi-search
+- id: web
+  name: '@deepseek-ai/dsh-web'
+  config:
+    searchProvider: multi-search
