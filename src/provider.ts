@@ -20,11 +20,16 @@ export class MultiSearchProvider implements WebSearchProvider {
   readonly id = MULTI_SEARCH_PROVIDER_ID
 
   private readonly adapters: Map<SearchProviderKind, ProviderAdapter> = new Map()
+  private readonly config: MultiSearchConfig
+  private readonly envGetter: (key: string) => string | undefined
 
   constructor(
-    private readonly config: MultiSearchConfig,
-    private readonly envGetter: (key: string) => string | undefined,
+    config: MultiSearchConfig,
+    envGetter: (key: string) => string | undefined,
   ) {
+    this.config = config
+    this.envGetter = envGetter
+
     // Register all supported adapters
     this.adapters.set('so360', new So360Adapter())
     this.adapters.set('bing', new BingAdapter())
@@ -87,7 +92,7 @@ export class MultiSearchProvider implements WebSearchProvider {
       }
     }
 
-    // Build the fallback chain: Prioritize API keys, then 360 (real-time news/events in CN), then Bing, then Baidu, then SearXNG, then DDG
+    // Build the fallback chain: Prioritize API keys, then 360, then Bing, then Baidu, then SearXNG, then DDG
     const priorityOrder: SearchProviderKind[] = [
       'tavily',
       'brave',

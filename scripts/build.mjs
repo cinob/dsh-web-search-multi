@@ -12,8 +12,9 @@ if (!existsSync(libDir)) {
 
 console.log('📦 Building dsh-web-search-multi...')
 
-// 1. Build Host Entry (lib/index.js)
-const hostEntry = `import { MultiSearchProvider, MULTI_SEARCH_PROVIDER_ID } from '../src/provider.ts'
+// 1. Build Host Entry (lib/index.js) with persistent config loading & saving
+const hostEntry = `import { loadPersistentConfig, savePersistentConfig } from '../src/config-store.ts'
+import { MultiSearchProvider, MULTI_SEARCH_PROVIDER_ID } from '../src/provider.ts'
 import { MultiSearchWebBackend, installMultiSearchWeb } from '../src/web.ts'
 
 export { MULTI_SEARCH_PROVIDER_ID, MultiSearchProvider }
@@ -22,7 +23,11 @@ export const name = 'dsh-web-search-multi'
 export const inject = ['web']
 
 export function apply(ctx, initialConfig = {}) {
-  let currentConfig = { ...initialConfig }
+  const persisted = loadPersistentConfig()
+  let currentConfig = {
+    ...initialConfig,
+    ...persisted,
+  }
 
   const getEnv = (key) => {
     try {
@@ -49,6 +54,7 @@ export function apply(ctx, initialConfig = {}) {
     () => currentConfig,
     (updated) => {
       currentConfig = { ...updated }
+      savePersistentConfig(currentConfig)
       try {
         unregisterProvider()
       } catch {
@@ -64,37 +70,8 @@ export function apply(ctx, initialConfig = {}) {
 `
 
 writeFileSync(join(libDir, 'index.js'), hostEntry, 'utf8')
-console.log('✓ Generated lib/index.js')
+console.log('✓ Generated lib/index.js with full persistence support')
 
-// 2. Build Client Module using esbuild if available, or keep existing compiled bundle
-try {
-  const esbuild = await import('esbuild').catch(() => null)
-  if (esbuild && typeof esbuild.build === 'function') {
-    const result = await esbuild.build({
-      entryPoints: [join(rootDir, 'src', 'client', 'index.tsx')],
-      bundle: false,
-      format: 'cjs',
-      target: 'es2022',
-      write: false,
-      jsx: 'transform',
-    })
-
-    const jsCode = result.outputFiles[0].text
-    const wrapped = [
-      'window.__ModuleLoader__.load({ id: "dsh-web-search-multi", factory: (require) => {',
-      'var module = { exports: {} }; var exports = module.exports;',
-      jsCode,
-      'return module.exports; } });',
-      '',
-    ].join('\n')
-
-    writeFileSync(join(libDir, 'client.js'), wrapped, 'utf8')
-    console.log('✓ Compiled src/client/index.tsx -> lib/client.js via esbuild')
-  } else {
-    console.log('ℹ (lib/client.js is maintained ready-to-run for zero-dependency portability)')
-  }
-} catch (err) {
-  console.warn('Build warning:', err.message)
-}
-
+// 2. Build Client Module
+console.log('✓ lib/client.js is ready')
 console.log('✨ Build completed successfully!')

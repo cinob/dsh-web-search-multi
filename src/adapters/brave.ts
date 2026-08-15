@@ -3,8 +3,11 @@ import type { ProviderAdapter } from '../types.ts'
 
 export class BraveAdapter implements ProviderAdapter {
   readonly id = 'brave'
+  private readonly apiKeyProvider: () => string | undefined
 
-  constructor(private readonly apiKeyProvider: () => string | undefined) {}
+  constructor(apiKeyProvider: () => string | undefined) {
+    this.apiKeyProvider = apiKeyProvider
+  }
 
   isAvailable(): boolean {
     const key = this.apiKeyProvider()

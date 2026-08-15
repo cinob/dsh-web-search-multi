@@ -3,11 +3,16 @@ import type { ProviderAdapter } from '../types.ts'
 
 export class SearxngAdapter implements ProviderAdapter {
   readonly id = 'searxng'
+  private readonly urlProvider: () => string | undefined
+  private readonly tokenProvider?: () => string | undefined
 
   constructor(
-    private readonly urlProvider: () => string | undefined,
-    private readonly tokenProvider?: () => string | undefined,
-  ) {}
+    urlProvider: () => string | undefined,
+    tokenProvider?: () => string | undefined,
+  ) {
+    this.urlProvider = urlProvider
+    this.tokenProvider = tokenProvider
+  }
 
   isAvailable(): boolean {
     const url = this.urlProvider()

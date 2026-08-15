@@ -3,8 +3,11 @@ import type { ProviderAdapter } from '../types.ts'
 
 export class BochaAdapter implements ProviderAdapter {
   readonly id = 'bocha'
+  private readonly apiKeyProvider: () => string | undefined
 
-  constructor(private readonly apiKeyProvider: () => string | undefined) {}
+  constructor(apiKeyProvider: () => string | undefined) {
+    this.apiKeyProvider = apiKeyProvider
+  }
 
   isAvailable(): boolean {
     const key = this.apiKeyProvider()

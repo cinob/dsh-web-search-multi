@@ -31,12 +31,22 @@ export interface MultiSearchSettingsSnapshot {
 }
 
 export class MultiSearchWebBackend {
+  private readonly ctx: Context
+  private readonly getConfig: () => MultiSearchConfig
+  private readonly saveConfig: (config: MultiSearchConfig) => Promise<void> | void
+  private readonly getEnv: (key: string) => string | undefined
+
   constructor(
-    private readonly ctx: Context,
-    private readonly getConfig: () => MultiSearchConfig,
-    private readonly saveConfig: (config: MultiSearchConfig) => Promise<void> | void,
-    private readonly getEnv: (key: string) => string | undefined,
-  ) {}
+    ctx: Context,
+    getConfig: () => MultiSearchConfig,
+    saveConfig: (config: MultiSearchConfig) => Promise<void> | void,
+    getEnv: (key: string) => string | undefined,
+  ) {
+    this.ctx = ctx
+    this.getConfig = getConfig
+    this.saveConfig = saveConfig
+    this.getEnv = getEnv
+  }
 
   async snapshot(): Promise<MultiSearchSettingsSnapshot> {
     const cfg = this.getConfig()
