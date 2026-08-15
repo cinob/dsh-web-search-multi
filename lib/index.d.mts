@@ -44,7 +44,7 @@ declare class MultiSearchProvider implements WebSearchProvider {
 declare const WEB_SEARCH_MULTI_SETTINGS_NAMESPACE = "web-search-multi";
 /** Cordis plugin name used by loader diagnostics. */
 declare const name = "dsh-web-search-multi";
-/** The web seam this provider registers into. */
+/** The seams this provider registers into and requires. */
 declare const inject: string[];
 /** Register the multi-provider search backend with `ctx.web` and Web GUI routes. */
 declare function apply(ctx: Context, initialConfig?: MultiSearchConfig): void;

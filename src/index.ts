@@ -19,8 +19,8 @@ export const WEB_SEARCH_MULTI_SETTINGS_NAMESPACE = 'web-search-multi'
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'dsh-web-search-multi'
 
-/** The web seam this provider registers into. */
-export const inject = ['web']
+/** The seams this provider registers into and requires. */
+export const inject = ['web', 'credentials', 'settings', 'webServer']
 
 /** Register the multi-provider search backend with `ctx.web` and Web GUI routes. */
 export function apply(ctx: Context, initialConfig: MultiSearchConfig = {}): void {
@@ -36,25 +36,23 @@ export function apply(ctx: Context, initialConfig: MultiSearchConfig = {}): void
   }
 
   // Hook into ctx.settings to load persistent settings from ~/.dsh/settings.yaml
-  ctx.inject(['settings'], (sctx: any) => {
-    try {
-      const scope = sctx.settings.register(WEB_SEARCH_MULTI_SETTINGS_NAMESPACE, undefined, {
-        base: currentConfig,
-      })
-      if (scope) {
+  try {
+    const scope = ctx.settings.register(WEB_SEARCH_MULTI_SETTINGS_NAMESPACE, undefined, {
+      base: currentConfig,
+    })
+    if (scope) {
+      currentConfig = { ...currentConfig, ...scope.get() }
+      scope.watch(() => {
         currentConfig = { ...currentConfig, ...scope.get() }
-        scope.watch(() => {
-          currentConfig = { ...currentConfig, ...scope.get() }
-        })
-      }
-    } catch {
-      // ignore
+      })
     }
-  })
+  } catch {
+    // ignore
+  }
 
   const resolveCredential = async (ref: string): Promise<string | undefined> => {
     try {
-      const credentials = (ctx as any).credentials || ctx.get?.('credentials')
+      const credentials = ctx.credentials || ctx.get?.('credentials')
       if (credentials) {
         const hit = await credentials.resolve(ref).catch(() => undefined)
         if (hit && hit.value && hit.value.trim().length > 0) return hit.value
@@ -64,7 +62,7 @@ export function apply(ctx: Context, initialConfig: MultiSearchConfig = {}): void
     }
 
     try {
-      const launchEnv = (ctx as any).launchEnvironment
+      const launchEnv = ctx.get?.('launchEnvironment')
       if (launchEnv && typeof launchEnv.get === 'function') {
         const val = launchEnv.get(ref)?.value
         if (val && val.trim().length > 0) return val
@@ -78,7 +76,7 @@ export function apply(ctx: Context, initialConfig: MultiSearchConfig = {}): void
 
   const resolveEnv = (key: string): string | undefined => {
     try {
-      const launchEnv = (ctx as any).launchEnvironment
+      const launchEnv = ctx.get?.('launchEnvironment')
       if (launchEnv && typeof launchEnv.get === 'function') {
         const val = launchEnv.get(key)?.value
         if (val) return val
@@ -105,7 +103,7 @@ export function apply(ctx: Context, initialConfig: MultiSearchConfig = {}): void
     async (updated) => {
       currentConfig = { ...currentConfig, ...updated }
       try {
-        const settings = (ctx as any).settings || ctx.get?.('settings')
+        const settings = ctx.settings || ctx.get?.('settings')
         if (settings && typeof settings.update === 'function') {
           await settings.update(WEB_SEARCH_MULTI_SETTINGS_NAMESPACE, {
             provider: updated.provider,

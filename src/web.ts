@@ -47,7 +47,7 @@ export class MultiSearchWebBackend {
 
   private async isCredentialConfigured(ref: string): Promise<boolean> {
     try {
-      const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+      const credentials = this.ctx.credentials || this.ctx.get?.('credentials')
       if (credentials) {
         const desc = await credentials.describe(ref).catch(() => undefined)
         if (desc && desc.configured) return true
@@ -59,7 +59,7 @@ export class MultiSearchWebBackend {
     }
 
     try {
-      const launchEnv = (this.ctx as any).launchEnvironment
+      const launchEnv = this.ctx.get?.('launchEnvironment')
       if (launchEnv && typeof launchEnv.get === 'function') {
         const val = launchEnv.get(ref)?.value
         if (val && val.trim().length > 0) return true
@@ -73,7 +73,7 @@ export class MultiSearchWebBackend {
 
   private async resolveCredentialValue(ref: string): Promise<string | undefined> {
     try {
-      const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+      const credentials = this.ctx.credentials || this.ctx.get?.('credentials')
       if (credentials) {
         const hit = await credentials.resolve(ref).catch(() => undefined)
         if (hit && hit.value && hit.value.trim().length > 0) return hit.value
@@ -83,7 +83,7 @@ export class MultiSearchWebBackend {
     }
 
     try {
-      const launchEnv = (this.ctx as any).launchEnvironment
+      const launchEnv = this.ctx.get?.('launchEnvironment')
       if (launchEnv && typeof launchEnv.get === 'function') {
         const val = launchEnv.get(ref)?.value
         if (val && val.trim().length > 0) return val
@@ -97,7 +97,7 @@ export class MultiSearchWebBackend {
 
   private async storeCredential(ref: string, secret: string | undefined): Promise<void> {
     if (secret === undefined) return
-    const credentials = (this.ctx as any).credentials || this.ctx.get?.('credentials')
+    const credentials = this.ctx.credentials || this.ctx.get?.('credentials')
     if (!credentials) return
 
     const trimmed = secret.trim()
@@ -326,16 +326,16 @@ export function installMultiSearchWeb(
   ctx: Context,
   backend: MultiSearchWebBackend,
 ): void {
-  ctx.inject(['webServer'], (webCtx: any) => {
-    webCtx.effect(() => {
-      const disposeSettings = webCtx.webServer.register({
-        kind: 'exact',
-        path: SETTINGS_ROUTE,
-        handler: (req: IncomingMessage, res: ServerResponse) => backend.handle(req, res),
-      })
-      return () => {
-        disposeSettings()
-      }
-    }, 'dsh-web-search-multi: Web routes')
-  })
+  ctx.effect(() => {
+    const webServer = ctx.webServer || ctx.get?.('webServer')
+    if (!webServer) return
+    const disposeSettings = webServer.register({
+      kind: 'exact',
+      path: SETTINGS_ROUTE,
+      handler: (req: IncomingMessage, res: ServerResponse) => backend.handle(req, res),
+    })
+    return () => {
+      disposeSettings()
+    }
+  }, 'dsh-web-search-multi: Web routes')
 }
