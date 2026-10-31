@@ -66,6 +66,13 @@ test('Config schema validates defaults and custom properties', () => {
   assert.equal(overridden.searxngUrl, 'https://search.example.com')
 })
 
+test('persisted fields are volatile so DSH settings can write them', () => {
+  const dict = Config.dict as Record<string, { meta?: { volatile?: boolean } }>
+  for (const key of ['provider', 'enableFallback', 'searxngUrl']) {
+    assert.equal(dict[key]?.meta?.volatile, true, `${key} must be volatile`)
+  }
+})
+
 test('apply registers namespace with ctx.settings and handles settings updates without error', async () => {
   const ctx = new Context()
   const settings = new MockSettingsProvider(ctx)
