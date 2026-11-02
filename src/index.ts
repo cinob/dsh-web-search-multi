@@ -12,6 +12,14 @@ import { MultiSearchProvider, MULTI_SEARCH_PROVIDER_ID } from './provider.ts'
 import type { MultiSearchConfig, SearchProviderKind } from './types.ts'
 import { MultiSearchWebBackend, installMultiSearchWeb } from './web.ts'
 
+// Polyfill .volatile() for schemastery < 3.18.6 compatibility
+const schemaProto = Object.getPrototypeOf(z.string())
+if (typeof schemaProto.volatile !== 'function') {
+  schemaProto.volatile = function () {
+    return this.extra('volatile', true)
+  }
+}
+
 export { MULTI_SEARCH_PROVIDER_ID, MultiSearchProvider }
 export type { MultiSearchConfig, SearchProviderKind } from './types.ts'
 
